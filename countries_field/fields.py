@@ -1,16 +1,14 @@
 # coding: utf-8
-import pycountry
 from django.db import models
 from django.db.models.fields.subclassing import Creator
 
 from .bitfield.models import BitField, MAX_FLAG_COUNT
 from .forms import CountriesFormField
-
+from .countries_list import ALPHA2_INDEX, ALL_COUNTRIES
 # Допустимые биты для хранения стран.
 VALID_BINARY_MASK = (1 << MAX_FLAG_COUNT) - 1
 
-ALPHA2_INDEX = [c.alpha2 for c in pycountry.countries]
-ALPHA2_MAP = {c: p for p, c in enumerate(ALPHA2_INDEX)}
+ALPHA2_MAP = {c: p for p, c in enumerate(ALL_COUNTRIES) if c is not None}
 
 
 def get_bit_field_name(i, name="countries", prefix=""):
@@ -23,7 +21,10 @@ def countries_to_bin(countries):
         c_num = ALPHA2_MAP[c.upper()]
         byte_num = int(c_num / MAX_FLAG_COUNT)
         bit_num = c_num % MAX_FLAG_COUNT
-        binaries[byte_num] |= 1 << bit_num
+        try:
+            binaries[byte_num] |= 1 << bit_num
+        except Exception as e:
+            import pdb; pdb.set_trace()
     return binaries
 
 
@@ -41,7 +42,7 @@ def bin_to_countries(binaries):
         bit_num = 0
         while byte:
             if byte & 0b1:
-                countries.append(ALPHA2_INDEX[byte_shift + bit_num])
+                countries.append(ALL_COUNTRIES[byte_shift + bit_num])
             byte >>= 1
             bit_num += 1
     return countries
@@ -202,7 +203,7 @@ class CountriesField(models.Field):
                 bit_field_name = get_bit_field_name(i, name=name)
                 start = i * MAX_FLAG_COUNT
                 end = i * MAX_FLAG_COUNT + MAX_FLAG_COUNT
-                flags = ALPHA2_INDEX[start:end]
+                flags = ALL_COUNTRIES[start:end]
                 bit_field = BitField(flags=flags, default=0, editable=False)
                 cls.add_to_class(bit_field_name, bit_field)
                 self.bit_field_names.append(bit_field_name)
