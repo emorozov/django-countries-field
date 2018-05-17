@@ -21,10 +21,7 @@ def countries_to_bin(countries):
         c_num = ALPHA2_MAP[c.upper()]
         byte_num = int(c_num / MAX_FLAG_COUNT)
         bit_num = c_num % MAX_FLAG_COUNT
-        try:
-            binaries[byte_num] |= 1 << bit_num
-        except Exception as e:
-            import pdb; pdb.set_trace()
+        binaries[byte_num] |= 1 << bit_num
     return binaries
 
 
