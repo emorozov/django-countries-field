@@ -26,6 +26,7 @@ if not settings.configured:
         ],
         ROOT_URLCONF='',
         DEBUG=False,
+        EXTRA_COUNTRIES=[None, None, ('XC', u'Crimea')]
     )
 
 
