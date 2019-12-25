@@ -40,6 +40,7 @@ def runtests(*test_args, **kwargs):
     failures = test_runner.run_tests(test_args)
     sys.exit(failures)
 
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--verbosity', dest='verbosity', action='store',

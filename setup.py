@@ -14,8 +14,9 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=[
-        'Django>=1.7,<1.10',
+        'Django>=1.10,<2.0',
         'pycountry==1.20',
+        'six>=1.10.0',
     ],
     test_suite='runtests.runtests',
     include_package_data=True,

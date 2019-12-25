@@ -1,13 +1,9 @@
 from __future__ import absolute_import
 
 from django.utils import six
-from django.db.models import signals
 from django.db.models.fields import Field, BigIntegerField
-from django.db.models.fields.subclassing import Creator
-from django.db.models.fields.subclassing import SubfieldBase
 
 from .forms import BitFormField
-from .query import BitQueryLookupWrapper
 from .types import BitHandler, Bit
 
 # Count binary capacity. Truncate "0b" prefix from binary form.
@@ -55,13 +51,16 @@ class BitFieldFlags(object):
         return list(self.itervalues())
 
 
-class BitFieldCreator(Creator):
+class BitFieldCreator(object):
     """
     Descriptor for BitFields.  Checks to make sure that all flags of the
     instance match the class.  This is to handle the case when caching
     an older version of the instance and a newer version of the class is
     available (usually during deploys).
     """
+    def __init__(self, field):
+        self.field = field
+
     def __get__(self, obj, type=None):
         if obj is None:
             return BitFieldFlags(self.field.flags)
@@ -70,28 +69,16 @@ class BitFieldCreator(Creator):
             # Update flags from class in case they've changed.
             retval._keys = self.field.flags
         return retval
+    
+    def __set__(self, obj, value):
+        obj.__dict__[self.field.name] = self.field.to_python(value)
 
 
-class BitFieldMeta(SubfieldBase):
-    """
-    Modified SubFieldBase to use our contribute_to_class method (instead of
-    monkey-patching make_contrib).  This uses our BitFieldCreator descriptor
-    in place of the default.
+class BitField(BigIntegerField):
+    def contribute_to_class(self, cls, name, **kwargs):
+        super(BitField, self).contribute_to_class(cls, name, **kwargs)
+        setattr(cls, self.name, BitFieldCreator(self))
 
-    NOTE: If we find ourselves needing custom descriptors for fields, we could
-    make this generic.
-    """
-    def __new__(cls, name, bases, attrs):
-        def contribute_to_class(self, cls, name):
-            BigIntegerField.contribute_to_class(self, cls, name)
-            setattr(cls, self.name, BitFieldCreator(self))
-
-        new_class = super(BitFieldMeta, cls).__new__(cls, name, bases, attrs)
-        new_class.contribute_to_class = contribute_to_class
-        return new_class
-
-
-class BitField(six.with_metaclass(BitFieldMeta, BigIntegerField)):
     def __init__(self, flags, default=None, *args, **kwargs):
         if isinstance(flags, dict):
             # Get only integer keys in correct range
@@ -124,13 +111,6 @@ class BitField(six.with_metaclass(BitFieldMeta, BigIntegerField)):
         self.flags = flags
         self.labels = labels
 
-    def south_field_triple(self):
-        "Returns a suitable description of this field for South."
-        from south.modelsinspector import introspector
-        field_class = "django.db.models.fields.BigIntegerField"
-        args, kwargs = introspector(self)
-        return (field_class, args, kwargs)
-
     def formfield(self, form_class=BitFormField, **kwargs):
         choices = [(k, self.labels[self.flags.index(k)]) for k in self.flags]
         return Field.formfield(self, form_class, choices=choices, **kwargs)
@@ -146,20 +126,11 @@ class BitField(six.with_metaclass(BitFieldMeta, BigIntegerField)):
             value = value.mask
         return int(value)
 
-    # def get_db_prep_save(self, value, connection):
-    #     if isinstance(value, Bit):
-    #         return BitQuerySaveWrapper(self.model._meta.db_table, self.name, value)
-    #     return super(BitField, self).get_db_prep_save(value, connection=connection)
-
     def get_db_prep_lookup(self, lookup_type, value, connection, prepared=False):
         if isinstance(getattr(value, 'expression', None), Bit):
             value = value.expression
         if isinstance(value, (BitHandler, Bit)):
-            if hasattr(self, 'class_lookups'):
-                # Django 1.7+
                 return [value.mask]
-            else:
-                return BitQueryLookupWrapper(self.model._meta.db_table, self.db_column or self.name, value)
         return BigIntegerField.get_db_prep_lookup(self, lookup_type=lookup_type, value=value,
                                                   connection=connection, prepared=prepared)
 
@@ -196,8 +167,3 @@ class BitField(six.with_metaclass(BitFieldMeta, BigIntegerField)):
         args.insert(0, self._arg_flags)
         return name, path, args, kwargs
 
-
-try:
-    BitField.register_lookup(BitQueryLookupWrapper)
-except AttributeError:
-    pass

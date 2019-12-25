@@ -7,7 +7,7 @@ Django model field which can store multiple selected countries.
 
 Requirements
 =====
-* Django>=1.7.0,<1.10.0
+* Django>=1.9.0,<2.0.0
 * pycountry>=1.20
 
 Installation

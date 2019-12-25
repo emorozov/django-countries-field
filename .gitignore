@@ -33,3 +33,8 @@ nosetests.xml
 .pydevproject
 .idea
 *.swp
+
+# Backups
+*~
+*.orig
+*.rej

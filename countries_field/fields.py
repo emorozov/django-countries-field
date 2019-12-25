@@ -1,10 +1,11 @@
 # coding: utf-8
 from django.db import models
-from django.db.models.fields.subclassing import Creator
 
 from .bitfield.models import BitField, MAX_FLAG_COUNT
 from .forms import CountriesFormField
-from .countries_list import ALPHA2_INDEX, ALL_COUNTRIES
+from .countries_list import ALL_COUNTRIES
+
+
 # Допустимые биты для хранения стран.
 VALID_BINARY_MASK = (1 << MAX_FLAG_COUNT) - 1
 
@@ -171,8 +172,10 @@ class CountriesValue(object):
         return False
 
 
-class CountriesFieldDescriptor(Creator):
+class CountriesFieldDescriptor(object):
     """ Управляет доступом к значениям битовых полей. """
+    def __init__(self, field):
+        self.field = field
 
     def __get__(self, obj, objtype=None):
         if obj is None:
@@ -192,8 +195,8 @@ class CountriesFieldDescriptor(Creator):
 class CountriesField(models.Field):
     """ Класс поля для хранения битовой карты стран. """
 
-    def contribute_to_class(self, cls, name, virtual_only=True):
-        super(CountriesField, self).contribute_to_class(cls, name, virtual_only=True)
+    def contribute_to_class(self, cls, name, **kwargs):
+        super(CountriesField, self).contribute_to_class(cls, name, **kwargs)
         self.bit_field_names = []
         if not cls._meta.abstract:
             for i in range(0, 4):

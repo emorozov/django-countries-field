@@ -1,6 +1,10 @@
 from __future__ import absolute_import
 
-from django.utils.six import string_types
+from six import string_types
+
+
+def cmp(a, b):
+    return (a > b) - (a < b)
 
 
 class Bit(object):
@@ -243,7 +247,7 @@ class BitHandler(object):
 
 from django.core.exceptions import ImproperlyConfigured
 
-# We need to register adapters in Django 1.8 in order to prevent
+# We need to register adapters in order to prevent
 # "ProgrammingError: can't adapt type"
 try:
     from django.db.backends.sqlite3.base import Database
